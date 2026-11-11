@@ -256,6 +256,16 @@
   .promise-body p { margin: 0 0 18px; max-width: 32ch; font-size: 1.1rem; line-height: 1.55; }
   .is-open .promise-body { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 0.35s ease, visibility 0s; }
 
+  @media (max-height: 700px) {
+    .scene { height: 80px; margin-top: 4px; }
+    .stage { min-height: 22rem; }
+    .copy { padding-top: 8px; }
+    .title { font-size: clamp(1.6rem, 6.6vw, 2rem); }
+    .copy p { font-size: 1.1rem; line-height: 1.5; }
+    .promise { min-height: 56px; }
+    .actions { padding-top: 16px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -275,7 +285,7 @@
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
     <div class="progress" id="progress" role="progressbar" aria-label="Progress" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
-      <i class="is-on"></i><i></i><i></i><i></i><i></i><i></i>
+      
     </div>
   </header>
 
@@ -309,15 +319,26 @@
       <div class="copy">
         <h2 class="title" tabindex="-1">I know I hurt you.</h2>
         <p id="what" hidden></p>
-        <p>I’m not going to make excuses. You deserved better from me, and I know it.</p>
+        <p>I know how hard you work, and knowing I made you cry hurts me too.</p>
+        <p>You are enough. I should never have made you feel like you weren’t.</p>
       </div>
       <div class="actions"><button class="btn btn--primary" type="button" data-next>Continue</button></div>
     </section>
 
     <section class="step">
       <div class="copy">
+        <h2 class="title" tabindex="-1">I misunderstood you.</h2>
+        <p>I know you can’t message back during office hours, and I understand that.</p>
+        <p>But sometimes I thought a reply only takes a second, and when it didn’t come, I felt ignored.</p>
+        <p>That was my mistake. I’m sorry I misunderstood you.</p>
+      </div>
+      <div class="actions"><button class="btn btn--primary" type="button" data-next>Continue</button></div>
+    </section>
+
+    <section class="step" id="s-distance">
+      <div class="copy">
         <h2 class="title" tabindex="-1">When we’re far apart, a bad moment can feel bigger than it is.</h2>
-        <p>I don’t want the distance to make this harder to fix.</p>
+        <p>I miss you, and I said it the wrong way. I don’t want the distance to make this harder to fix.</p>
       </div>
       <div class="slide">
         <input id="slider" class="slider" type="range" min="0" max="100" value="0" step="1" aria-label="Bring us closer">
@@ -368,11 +389,11 @@
   const CONFIG = {
     hisName: "",        // his name, e.g. "Alex"
     herName: "",        // your name, shown in the sign-off
-    whatHappened: "",   // finishes "I’m sorry for ...", e.g. "missing our call"
+    whatHappened: "complaining about your time and attention",   // finishes "I’m sorry for ...", e.g. "missing our call"
     promises: [
-      ["I’ll listen first.", "When something bothers me, I’ll hear your side before I react."],
-      ["I’ll talk to you.", "If I’m upset, I’ll tell you instead of going quiet or pulling away."],
-      ["I’ll make time for us.", "Even with the distance, I’ll make sure you always know you matter to me."]
+      ["I’ll be patient.", "I know your work is hectic. When you can’t make time or reply right away, I won’t take it as you not caring."],
+      ["I’ll say it gently.", "When I miss you or need your attention, I’ll tell you kindly instead of complaining."],
+      ["I’ll cherish small moments.", "A short call, a voice note, a good-morning text. They all count, and we can find what fits your day, together."]
     ]
   };
 
@@ -390,8 +411,11 @@
   const scene = $("#scene");
   const sparksEl = $("#sparks");
   const steps = $$(".step");
-  const dots = $$("#progress i");
   const progress = $("#progress");
+  steps.forEach(() => progress.append(document.createElement("i")));
+  progress.setAttribute("aria-valuemax", String(steps.length));
+  const dots = $$("#progress i");
+  const distanceStep = steps.indexOf($("#s-distance"));
   const back = $("#back");
   const slider = $("#slider");
   const hint = $("#hint");
@@ -437,7 +461,7 @@
 
   /* Rendering */
   function sceneProgress() {
-    if (step < 3) return 0;
+    if (step < distanceStep) return 0;
     return merged ? 1 : Number(slider.value) / 100;
   }
 
@@ -452,7 +476,7 @@
     progress.setAttribute("aria-valuenow", String(step + 1));
     back.style.visibility = step === 0 ? "hidden" : "visible";
     app.style.setProperty("--p", String(sceneProgress()));
-    scene.classList.toggle("is-merged", step >= 3 && merged);
+    scene.classList.toggle("is-merged", step >= distanceStep && merged);
     if (moveFocus) {
       const h = $$("[tabindex='-1']", steps[step]).find((n) => !n.closest("[hidden]"));
       if (h) h.focus({ preventScroll: true });
