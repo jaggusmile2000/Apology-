@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>For you</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eceff7;
+    --ink: #181d33;
+    --muted: #545b7b;
+    --line: #cdd2e4;
+    --edge: #6a7293;
+    --accent: #c42c58;
+    --on-accent: #ffffff;
+    --her: #e07f14;
+    --her-halo: rgba(224, 127, 20, 0.22);
+    --him: #2f6fd0;
+    --him-halo: rgba(47, 111, 208, 0.22);
+    --heart: #d42a58;
+    --heart-halo: rgba(212, 42, 88, 0.32);
+    --glow: #ffd3c4;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", Georgia, serif;
+    --sans: ui-rounded, "SF Pro Rounded", Nunito, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --gutter: clamp(20px, 6vw, 32px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0c1120;
+      --ink: #eeeaf6;
+      --muted: #a2a5c0;
+      --line: #2b3250;
+      --edge: #6d7599;
+      --accent: #ff8fa8;
+      --on-accent: #2a0e19;
+      --her: #ffb866;
+      --her-halo: rgba(255, 184, 102, 0.28);
+      --him: #86bfff;
+      --him-halo: rgba(134, 191, 255, 0.28);
+      --heart: #ff6f91;
+      --heart-halo: rgba(255, 111, 145, 0.45);
+      --glow: #5b2742;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--serif); }
+  button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  @keyframes spark {
+    to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2); opacity: 0; }
+  }
+
+  /* Layout */
+  .app {
+    --p: 0;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) var(--gutter) max(20px, env(safe-area-inset-bottom));
+    animation: fade 0.9s ease both;
+  }
+
+  /* The room warms up as the two lights get closer */
+  .dawn {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(90% 55% at 50% 12%, var(--glow), transparent 72%);
+    opacity: calc(var(--p) * var(--p));
+    transition: opacity 1.2s ease;
+  }
+
+  .top { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-left: -10px; }
+  .back {
+    flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+    background: none; border: 0; border-radius: 50%; cursor: pointer;
+  }
+  .back:focus-visible, .btn:focus-visible, .promise:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 3px;
+  }
+  .progress { flex: 1; display: flex; gap: 6px; }
+  .progress i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); transition: background 0.4s; }
+  .progress i.is-on { background: var(--accent); }
+
+  /* The two lights */
+  .scene { --r: 11px; position: relative; height: 96px; margin-top: 12px; }
+  .gap, .orb {
+    transition: left 0.6s cubic-bezier(0.3, 0.7, 0.2, 1), right 0.6s cubic-bezier(0.3, 0.7, 0.2, 1),
+                opacity 0.35s ease 0.15s, transform 0.35s ease 0.15s;
+  }
+  .scene.is-dragging .gap, .scene.is-dragging .orb {
+    transition: opacity 0.35s ease 0.15s, transform 0.35s ease 0.15s;
+  }
+  .gap {
+    position: absolute; top: 34px; height: 0; margin-top: -1px;
+    border-top: 2px dotted var(--edge);
+    left: calc(var(--r) * 2 + (50% - var(--r)) * var(--p));
+    right: calc(var(--r) * 2 + (50% - var(--r)) * var(--p));
+  }
+  .orb {
+    position: absolute; top: 34px; width: 22px; height: 22px; border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .orb--her {
+    left: calc(var(--r) + (50% - var(--r)) * var(--p));
+    background: var(--her);
+    box-shadow: 0 0 0 7px var(--her-halo), 0 0 28px 8px var(--her-halo);
+  }
+  .orb--him {
+    left: calc(100% - var(--r) - (50% - var(--r)) * var(--p));
+    background: var(--him);
+    box-shadow: 0 0 0 7px var(--him-halo), 0 0 28px 8px var(--him-halo);
+  }
+  .tag {
+    position: absolute; left: 50%; top: 100%; margin-top: 14px; transform: translateX(-50%);
+    font: italic 1rem/1 var(--serif); color: var(--muted);
+    opacity: calc(1 - var(--p) * 1.6);
+    transition: opacity 0.6s ease;
+  }
+  .scene.is-merged .orb { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+
+  .heart {
+    position: absolute; left: 50%; top: 34px; width: 60px; height: 60px;
+    transform: translate(-50%, -50%) scale(0.2); opacity: 0; pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.25s ease;
+  }
+  .heart svg { display: block; width: 100%; height: 100%; fill: var(--heart); filter: drop-shadow(0 6px 18px var(--heart-halo)); }
+  .scene.is-merged .heart {
+    opacity: 1; transform: translate(-50%, -50%) scale(1);
+    transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s, opacity 0.4s ease 0.25s;
+  }
+  .scene.is-merged .heart svg { animation: beat 2.6s ease-in-out 1s infinite; }
+  .scene.is-merged.is-glad .heart { transform: translate(-50%, -50%) scale(1.2); transition-delay: 0s; }
+  .scene.is-merged.is-quiet .heart { opacity: 0.78; }
+  .scene.is-quiet .heart svg { animation-duration: 4.5s; }
+
+  .sparks { position: absolute; inset: 0; pointer-events: none; }
+  .spark {
+    position: absolute; left: 50%; top: 34px; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--c); transform: translate(-50%, -50%);
+    animation: spark 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  /* Steps */
+  .stage { position: relative; flex: 1 1 auto; min-height: 26rem; margin-top: 8px; }
+  .step {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+  }
+  .step.is-active { opacity: 1; visibility: visible; transition: opacity 0.45s ease 0.12s, visibility 0s; }
+  [tabindex="-1"]:focus { outline: none; }
+
+  .copy { padding-top: 20px; }
+  .display {
+    margin: 0 0 0.45em;
+    font: 600 clamp(2.6rem, 12vw, 3.9rem) / 1.04 var(--serif);
+    letter-spacing: -0.02em; text-wrap: balance;
+  }
+  .title {
+    margin: 0 0 0.6em;
+    font: 600 clamp(1.8rem, 7.4vw, 2.3rem) / 1.14 var(--serif);
+    letter-spacing: -0.012em; text-wrap: balance;
+  }
+  .copy p { margin: 0 0 1em; max-width: 30ch; font-size: 1.18rem; line-height: 1.6; text-wrap: pretty; }
+  .copy p.muted { color: var(--muted); }
+  .sign { font: italic 1.1rem/1.5 var(--serif); color: var(--muted); }
+
+  .actions {
+    margin-top: auto; padding-top: 28px; display: grid; gap: 12px;
+    transition: opacity 0.5s ease;
+  }
+  .actions.is-locked { opacity: 0; visibility: hidden; }
+
+  .btn {
+    width: 100%; min-height: 56px; padding: 0 28px; border-radius: 999px; border: 1.5px solid transparent;
+    font: 600 1.05rem/1 var(--sans); cursor: pointer; transition: transform 0.15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn--primary { background: var(--accent); color: var(--on-accent); }
+  .btn--ghost { background: transparent; border-color: var(--edge); color: var(--ink); }
+  .btn--text {
+    min-height: 48px; background: none; border: 0; color: var(--muted);
+    font: 500 1rem/1 var(--sans); text-decoration: underline; text-underline-offset: 4px;
+  }
+
+  /* Slider */
+  .slide { margin-top: 22px; padding: 0 3px; }
+  .slider {
+    --v: 0;
+    -webkit-appearance: none; appearance: none;
+    display: block; width: 100%; height: 44px; margin: 0; background: transparent;
+    cursor: pointer; touch-action: pan-y;
+  }
+  .slider::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 6px;
+    background: linear-gradient(to right, var(--accent) calc(var(--v) * 1%), var(--line) calc(var(--v) * 1%));
+  }
+  .slider::-moz-range-track { height: 6px; border-radius: 6px; background: var(--line); }
+  .slider::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--accent); }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none; box-sizing: border-box; width: 32px; height: 32px; margin-top: -13px;
+    border-radius: 50%; background: var(--accent); border: 4px solid var(--bg); box-shadow: 0 0 0 1.5px var(--accent);
+  }
+  .slider::-moz-range-thumb {
+    box-sizing: border-box; width: 32px; height: 32px;
+    border-radius: 50%; background: var(--accent); border: 4px solid var(--bg); box-shadow: 0 0 0 1.5px var(--accent);
+  }
+  .slider:focus-visible { outline: none; }
+  .slider:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .slider:focus-visible::-moz-range-thumb { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .slider:disabled { opacity: 0.5; cursor: default; }
+
+  .status { display: grid; margin-top: 10px; min-height: 3.6em; }
+  .status > * { grid-area: 1 / 1; margin: 0; }
+  .hint { font: 500 0.98rem/1.4 var(--sans); color: var(--muted); }
+  .after { font: italic 1.25rem/1.45 var(--serif); }
+  .after.is-in { animation: fade 0.7s ease both; }
+
+  /* Promises */
+  .promises { list-style: none; margin: 6px 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .promises li { border-bottom: 1px solid var(--line); }
+  .promise {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    width: 100%; min-height: 64px; padding: 12px 0; background: none; border: 0; border-radius: 6px;
+    font: 600 1.25rem/1.25 var(--serif); text-align: left; cursor: pointer;
+  }
+  .plus { position: relative; flex: none; width: 20px; height: 20px; transition: transform 0.3s ease; }
+  .plus::before, .plus::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 2px; margin: -1px 0 0 -8px;
+    border-radius: 2px; background: var(--accent);
+  }
+  .plus::after { transform: rotate(90deg); }
+  .promise[aria-expanded="true"] .plus { transform: rotate(45deg); }
+  .promise-body {
+    display: grid; grid-template-rows: 0fr; visibility: hidden;
+    transition: grid-template-rows 0.35s ease, visibility 0s linear 0.35s;
+  }
+  .promise-body > div { overflow: hidden; }
+  .promise-body p { margin: 0 0 18px; max-width: 32ch; font-size: 1.1rem; line-height: 1.55; }
+  .is-open .promise-body { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 0.35s ease, visibility 0s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0s !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="dawn" aria-hidden="true"></div>
+
+  <header class="top">
+    <button class="back" id="back" type="button" aria-label="Back" style="visibility:hidden">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="progress" id="progress" role="progressbar" aria-label="Progress" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
+      <i class="is-on"></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+  </header>
+
+  <div class="scene" id="scene" aria-hidden="true">
+    <div class="gap"></div>
+    <div class="orb orb--her"><span class="tag">me</span></div>
+    <div class="orb orb--him"><span class="tag">you</span></div>
+    <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+    <div class="sparks" id="sparks"></div>
+  </div>
+
+  <main class="stage">
+
+    <section class="step is-active">
+      <div class="copy">
+        <h1 class="display" tabindex="-1">I made this for you.</h1>
+        <p class="muted">It takes about a minute.</p>
+      </div>
+      <div class="actions"><button class="btn btn--primary" type="button" data-next>Open</button></div>
+    </section>
+
+    <section class="step">
+      <div class="copy">
+        <h2 class="display" id="apology" tabindex="-1">I’m sorry.</h2>
+        <p>I wanted to say it properly, not just in a text.</p>
+      </div>
+      <div class="actions"><button class="btn btn--primary" type="button" data-next>Continue</button></div>
+    </section>
+
+    <section class="step">
+      <div class="copy">
+        <h2 class="title" tabindex="-1">I know I hurt you.</h2>
+        <p id="what" hidden></p>
+        <p>I’m not going to make excuses. You deserved better from me, and I know it.</p>
+      </div>
+      <div class="actions"><button class="btn btn--primary" type="button" data-next>Continue</button></div>
+    </section>
+
+    <section class="step">
+      <div class="copy">
+        <h2 class="title" tabindex="-1">When we’re far apart, a bad moment can feel bigger than it is.</h2>
+        <p>I don’t want the distance to make this harder to fix.</p>
+      </div>
+      <div class="slide">
+        <input id="slider" class="slider" type="range" min="0" max="100" value="0" step="1" aria-label="Bring us closer">
+        <div class="status">
+          <p class="hint" id="hint">Slide to bring us closer.</p>
+          <p class="after" id="after" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="actions is-locked" id="lock">
+        <button class="btn btn--primary" type="button" data-next>Continue</button>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="copy">
+        <h2 class="title" tabindex="-1">Here’s what I promise.</h2>
+        <p class="muted">Tap each one.</p>
+      </div>
+      <ul class="promises" id="promises"></ul>
+      <div class="actions"><button class="btn btn--primary" type="button" data-next>Continue</button></div>
+    </section>
+
+    <section class="step">
+      <div class="copy" id="ask">
+        <h2 class="title" tabindex="-1">Can you forgive me?</h2>
+        <p>Answer however you honestly feel. I’ll understand either way.</p>
+      </div>
+      <div class="copy" id="reply" hidden>
+        <h2 class="title" id="replyTitle" tabindex="-1"></h2>
+        <p id="replyBody"></p>
+        <p class="sign" id="sign" hidden></p>
+      </div>
+      <div class="actions" id="choices">
+        <button class="btn btn--primary" type="button" id="yes">I forgive you</button>
+        <button class="btn btn--ghost" type="button" id="later">I need more time</button>
+      </div>
+      <div class="actions" id="undo" hidden>
+        <button class="btn btn--text" type="button" id="again">Change my answer</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(() => {
+  /* Make it yours: edit these. Leave a line as "" to skip it. */
+  const CONFIG = {
+    hisName: "",        // his name, e.g. "Alex"
+    herName: "",        // your name, shown in the sign-off
+    whatHappened: "",   // finishes "I’m sorry for ...", e.g. "missing our call"
+    promises: [
+      ["I’ll listen first.", "When something bothers me, I’ll hear your side before I react."],
+      ["I’ll talk to you.", "If I’m upset, I’ll tell you instead of going quiet or pulling away."],
+      ["I’ll make time for us.", "Even with the distance, I’ll make sure you always know you matter to me."]
+    ]
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const buzz = (pattern) => { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {} };
+
+  const app = $("#app");
+  const scene = $("#scene");
+  const sparksEl = $("#sparks");
+  const steps = $$(".step");
+  const dots = $$("#progress i");
+  const progress = $("#progress");
+  const back = $("#back");
+  const slider = $("#slider");
+  const hint = $("#hint");
+  const after = $("#after");
+  const lock = $("#lock");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let step = 0;
+  let merged = false;
+  let dragTimer = 0;
+
+  /* Personalise */
+  const hisName = CONFIG.hisName.trim();
+  const herName = CONFIG.herName.trim();
+  const what = CONFIG.whatHappened.trim();
+  if (hisName) $("#apology").textContent = `I’m sorry, ${hisName}.`;
+  if (what) { const w = $("#what"); w.textContent = `I’m sorry for ${what}.`; w.hidden = false; }
+  if (herName) { const s = $("#sign"); s.textContent = `With love, ${herName}`; s.hidden = false; }
+
+  /* Promises */
+  const list = $("#promises");
+  CONFIG.promises.forEach(([title, text], i) => {
+    const li = el("li");
+    const btn = el("button", "promise");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "promise-" + i);
+    const plus = el("span", "plus");
+    plus.setAttribute("aria-hidden", "true");
+    btn.append(el("span", null, title), plus);
+    const body = el("div", "promise-body");
+    body.id = "promise-" + i;
+    const inner = el("div");
+    inner.append(el("p", null, text));
+    body.append(inner);
+    btn.addEventListener("click", () => {
+      const open = li.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", String(open));
+    });
+    li.append(btn, body);
+    list.append(li);
+  });
+
+  /* Rendering */
+  function sceneProgress() {
+    if (step < 3) return 0;
+    return merged ? 1 : Number(slider.value) / 100;
+  }
+
+  function render(moveFocus) {
+    steps.forEach((s, i) => {
+      const on = i === step;
+      s.classList.toggle("is-active", on);
+      s.setAttribute("aria-hidden", on ? "false" : "true");
+      s.inert = !on;
+    });
+    dots.forEach((d, i) => d.classList.toggle("is-on", i <= step));
+    progress.setAttribute("aria-valuenow", String(step + 1));
+    back.style.visibility = step === 0 ? "hidden" : "visible";
+    app.style.setProperty("--p", String(sceneProgress()));
+    scene.classList.toggle("is-merged", step >= 3 && merged);
+    if (moveFocus) {
+      const h = $$("[tabindex='-1']", steps[step]).find((n) => !n.closest("[hidden]"));
+      if (h) h.focus({ preventScroll: true });
+    }
+  }
+
+  function go(n) {
+    step = Math.max(0, Math.min(steps.length - 1, n));
+    render(true);
+  }
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-next]")) go(step + 1);
+  });
+  back.addEventListener("click", () => go(step - 1));
+
+  /* Sparks */
+  function burst(count) {
+    if (reduceMotion) return;
+    const colors = ["var(--her)", "var(--him)", "var(--heart)"];
+    for (let i = 0; i < count; i++) {
+      const s = el("span", "spark");
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 50 + Math.random() * 70;
+      s.style.setProperty("--dx", Math.cos(angle) * dist + "px");
+      s.style.setProperty("--dy", Math.sin(angle) * dist + "px");
+      s.style.setProperty("--c", colors[i % colors.length]);
+      s.addEventListener("animationend", () => s.remove());
+      sparksEl.append(s);
+    }
+  }
+
+  /* Closing the distance */
+  function mergeNow() {
+    merged = true;
+    slider.value = "100";
+    slider.style.setProperty("--v", "100");
+    slider.disabled = true;
+    scene.classList.remove("is-dragging");
+    hint.hidden = true;
+    after.textContent = "Distance can’t change how much I care about you.";
+    after.classList.add("is-in");
+    lock.classList.remove("is-locked");
+    render(false);
+    setTimeout(() => { burst(16); buzz([12, 40, 12]); }, 320);
+  }
+
+  slider.addEventListener("input", () => {
+    if (merged) return;
+    const v = Number(slider.value);
+    slider.style.setProperty("--v", String(v));
+    scene.classList.add("is-dragging");
+    clearTimeout(dragTimer);
+    dragTimer = setTimeout(() => scene.classList.remove("is-dragging"), 150);
+    if (v >= 97) { mergeNow(); return; }
+    app.style.setProperty("--p", String(v / 100));
+    hint.textContent =
+      v < 25 ? "Far apart. Keep sliding." :
+      v < 60 ? "Getting closer." :
+      v < 85 ? "Almost there." : "So close.";
+  });
+
+  /* Her question */
+  const ask = $("#ask");
+  const reply = $("#reply");
+  const choices = $("#choices");
+  const undo = $("#undo");
+
+  function answer(forgives) {
+    $("#replyTitle").textContent = forgives ? "Thank you." : "Of course.";
+    $("#replyBody").textContent = forgives
+      ? "That means everything to me. Whenever you want to talk, I’m right here."
+      : "Take all the time you need. I won’t push. I’m here whenever you’re ready to talk.";
+    ask.hidden = true;
+    choices.hidden = true;
+    reply.hidden = false;
+    undo.hidden = false;
+    scene.classList.toggle("is-glad", forgives);
+    scene.classList.toggle("is-quiet", !forgives);
+    if (forgives) { burst(22); buzz([12, 40, 12]); }
+    $("#replyTitle").focus({ preventScroll: true });
+  }
+
+  $("#yes").addEventListener("click", () => answer(true));
+  $("#later").addEventListener("click", () => answer(false));
+  $("#again").addEventListener("click", () => {
+    reply.hidden = true;
+    undo.hidden = true;
+    ask.hidden = false;
+    choices.hidden = false;
+    scene.classList.remove("is-glad", "is-quiet");
+    $("#ask .title").focus({ preventScroll: true });
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>
